@@ -16,6 +16,8 @@ from pathlib import Path
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse options for exporting a small Food-101 class-folder dataset."""
+
     parser = argparse.ArgumentParser(description="Prepare pizza/steak/sushi images from Hugging Face Food-101.")
     parser.add_argument("--dataset", default="ethz/food101", help="Hugging Face dataset id.")
     parser.add_argument("--output-dir", default="data/pizza_steak_sushi", help="Output class-folder directory.")
@@ -26,15 +28,21 @@ def parse_args() -> argparse.Namespace:
 
 
 def safe_name(value: str) -> str:
+    """Make a value safe to use inside generated image filenames."""
+
     return re.sub(r"[^a-zA-Z0-9_.-]+", "_", value).strip("_")
 
 
 def main() -> None:
+    """Download Food-101 from Hugging Face and export selected classes."""
+
     args = parse_args()
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
+        # Import lazily so the script can show a friendly message if the user
+        # has not installed Hugging Face Datasets yet.
         from datasets import load_dataset
     except ModuleNotFoundError as exc:
         raise SystemExit(
@@ -49,6 +57,8 @@ def main() -> None:
     label_feature = dataset.features["label"]
     label_names = label_feature.names
     wanted = set(args.classes)
+    # Food-101 stores labels as integer IDs. Map the requested class names back
+    # to their IDs so we can filter the stream of examples efficiently.
     wanted_label_ids = {label_names.index(class_name): class_name for class_name in args.classes}
     counts = {class_name: 0 for class_name in args.classes}
 
@@ -60,12 +70,15 @@ def main() -> None:
 
         class_dir = output_dir / class_name
         class_dir.mkdir(parents=True, exist_ok=True)
+        # Convert to RGB and save as JPG so the training pipeline sees a simple,
+        # consistent directory of image files.
         image = example["image"].convert("RGB")
         image_path = class_dir / f"{safe_name(class_name)}_{counts[class_name]:04d}_{example_index:06d}.jpg"
         image.save(image_path, quality=95)
         counts[class_name] += 1
 
         if all(counts[class_name] >= args.images_per_class for class_name in wanted):
+            # Stop as soon as every requested class has enough images.
             break
 
     print(f"Saved subset to: {output_dir}")

@@ -19,6 +19,8 @@ except ImportError:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line options used by local runs and Kaggle notebooks."""
+
     parser = argparse.ArgumentParser(description="Train TinyVGG or EfficientNet on a custom image dataset.")
     parser.add_argument("--data-dir", type=str, default=None, help="Single class-folder dataset to split into train/test.")
     parser.add_argument("--train-dir", type=str, default=None, help="Training directory with class subfolders.")
@@ -39,18 +41,26 @@ def parse_args() -> argparse.Namespace:
 
 
 def _default_data_dir(args: argparse.Namespace) -> None:
+    """Use the assignment's default data path when no path is provided."""
+
     if args.data_dir is None and args.train_dir is None:
         candidate = Path("data") / "pizza_steak_sushi"
         args.data_dir = str(candidate)
 
 
 def build_model(model_name: str, class_count: int, hidden_units: int, image_size: int) -> nn.Module:
+    """Create the requested model architecture."""
+
     if model_name == "effnetb0":
         return model_builder.create_effnetb0(output_shape=class_count)
     return model_builder.create_tinyvgg(hidden_units=hidden_units, output_shape=class_count, image_size=image_size)
 
 
 def run_training(args: argparse.Namespace, lr: float, hidden_units: int, run_name: str) -> dict:
+    """Run one full experiment and save its outputs."""
+
+    # EfficientNet expects the common ImageNet input size; TinyVGG stays smaller
+    # for speed because it is trained from scratch.
     train_dataloader, test_dataloader, class_names = data_setup.create_dataloaders(
         train_dir=args.train_dir,
         test_dir=args.test_dir,
@@ -60,10 +70,14 @@ def run_training(args: argparse.Namespace, lr: float, hidden_units: int, run_nam
         augment=not args.no_augment,
         num_workers=args.num_workers,
     )
+    # Prefer CUDA on Kaggle, then Apple MPS locally, then CPU as a fallback.
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     model = build_model(args.model, len(class_names), hidden_units, 224 if args.model == "effnetb0" else args.image_size)
+    # Frozen EfficientNet parameters have requires_grad=False, so filter them
+    # out and optimize only trainable parameters.
     optimizer = torch.optim.Adam(filter(lambda parameter: parameter.requires_grad, model.parameters()), lr=lr)
     loss_fn = nn.CrossEntropyLoss()
+    # Each experiment gets its own TensorBoard folder for comparison.
     writer = engine.make_writer(
         experiment_name=run_name,
         model_name=args.model,
@@ -81,6 +95,8 @@ def run_training(args: argparse.Namespace, lr: float, hidden_units: int, run_nam
         writer=writer,
     )
     summary = engine.summarize_results(results)
+    # Store metadata beside TensorBoard logs so README tables can be filled from
+    # a small JSON file instead of reading the whole event log.
     summary.update(
         {
             "run_name": run_name,
@@ -91,19 +107,26 @@ def run_training(args: argparse.Namespace, lr: float, hidden_units: int, run_nam
         }
     )
     utils.save_json(summary, Path(args.experiments_dir) / run_name / "summary.json")
+    # These files are regenerated after each run; the comparison plot is created
+    # after the grid finishes.
     utils.plot_loss_curves(results, save_path="loss_curves.png")
     utils.save_model(model, args.models_dir, "best_model.pth")
     return summary
 
 
 def main() -> None:
+    """CLI entry point."""
+
     args = parse_args()
     _default_data_dir(args)
     if args.model == "effnetb0" and args.epochs == 30:
+        # The rubric asks for 10 epochs of transfer learning, so use that when
+        # the user selects EfficientNet without overriding epochs.
         args.epochs = 10
 
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     if args.compare_grid:
+        # Required assignment grid: three learning-rate/hidden-unit configs.
         grid = [(0.001, 10), (0.0005, 10), (0.001, 20)]
         summaries = []
         for lr, hidden_units in grid:

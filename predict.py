@@ -11,6 +11,8 @@ from going_modular import data_setup, model_builder, utils
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse image paths and checkpoint options for demo inference."""
+
     parser = argparse.ArgumentParser(description="Predict Food-101 subset classes for custom images.")
     parser.add_argument("images", nargs="+", help="Image paths to classify.")
     parser.add_argument("--checkpoint", default="models/best_model.pth")
@@ -23,8 +25,12 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    # Use the same device preference as training so predictions work on Kaggle,
+    # Apple Silicon, and CPU-only machines.
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     image_size = 224 if args.model == "effnetb0" else args.image_size
+    # The checkpoint only stores weights, so we must rebuild the matching model
+    # architecture before loading it.
     if args.model == "effnetb0":
         model = model_builder.create_effnetb0(output_shape=len(args.classes))
     else:
@@ -34,8 +40,10 @@ def main() -> None:
             image_size=image_size,
         )
     model = utils.load_model(model, args.checkpoint, device=device)
+    # Prediction uses deterministic preprocessing, not training augmentation.
     transform = data_setup.build_transforms(image_size=image_size, augment=False)
 
+    # The assignment asks to demonstrate inference on 3 custom images.
     for image_path in args.images[:3]:
         prediction, confidence = utils.predict_image(model, Path(image_path), args.classes, transform, device=device)
         print(f"{image_path}: {prediction} ({confidence:.2%})")

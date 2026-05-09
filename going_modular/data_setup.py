@@ -30,6 +30,7 @@ class ImageDataset(Dataset):
         class_names: list[str] | None = None,
         transform: Callable | None = None,
     ) -> None:
+        # Store paths as pathlib objects so file handling is OS-independent.
         self.image_paths = [Path(path) for path in image_paths]
         raw_labels = list(labels)
         if len(self.image_paths) != len(raw_labels):
@@ -37,6 +38,9 @@ class ImageDataset(Dataset):
         if not self.image_paths:
             raise ValueError("ImageDataset needs at least one image path.")
 
+        # If the caller does not provide a class order, create one. A stable
+        # class order is important because label indices must match model
+        # outputs and prediction class names.
         if class_names is None:
             if all(isinstance(label, int) for label in raw_labels):
                 class_names = [str(index) for index in sorted(set(raw_labels))]
@@ -45,6 +49,8 @@ class ImageDataset(Dataset):
 
         self.class_names = list(class_names)
         self.class_to_idx = {class_name: index for index, class_name in enumerate(self.class_names)}
+        # Convert string labels like "pizza" into integer class indices. PyTorch
+        # classification losses expect integer targets, not class-name strings.
         self.labels = [label if isinstance(label, int) else self.class_to_idx[str(label)] for label in raw_labels]
         self.transform = transform
 
@@ -53,6 +59,8 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, int]:
         image_path = self.image_paths[index]
+        # Convert every image to RGB so grayscale/RGBA files still produce
+        # consistent 3-channel tensors for CNN input.
         image = Image.open(image_path).convert("RGB")
         if self.transform is not None:
             image = self.transform(image)
@@ -64,10 +72,16 @@ def build_transforms(
     augment: bool = False,
     normalize: bool = True,
 ) -> transforms.Compose:
-    """Create torchvision transforms for training or evaluation."""
+    """Create torchvision transforms for training or evaluation.
+
+    ``augment=True`` is meant for the training set only. The test set should use
+    deterministic transforms so validation accuracy is comparable across runs.
+    """
 
     transform_steps: list[Callable] = [transforms.Resize((image_size, image_size))]
     if augment:
+        # Lightweight augmentation helps TinyVGG generalize better on the small
+        # 675-image subset without changing the label semantics.
         transform_steps.extend(
             [
                 transforms.RandomHorizontalFlip(p=0.5),
@@ -76,6 +90,8 @@ def build_transforms(
         )
     transform_steps.append(transforms.ToTensor())
     if normalize:
+        # ImageNet normalization is compatible with EfficientNet pretrained
+        # weights and still works fine for TinyVGG.
         transform_steps.append(transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD))
     return transforms.Compose(transform_steps)
 
@@ -109,6 +125,8 @@ def list_image_paths(directory: str | Path, class_names: list[str] | None = None
         class_dir = directory / class_name
         if not class_dir.exists():
             continue
+        # rglob allows nested folders inside each class directory while still
+        # filtering out non-image files such as README files or metadata.
         for image_path in sorted(class_dir.rglob("*")):
             if image_path.is_file() and image_path.suffix.lower() in IMAGE_EXTENSIONS:
                 paths.append(image_path)
@@ -141,8 +159,12 @@ def stratified_split(
     for label, paths in by_label.items():
         shuffled = paths[:]
         rng.shuffle(shuffled)
+        # Split each class independently so pizza/steak/sushi proportions stay
+        # balanced in both training and test sets.
         split_index = max(1, int(len(shuffled) * train_ratio))
         if len(shuffled) > 1:
+            # Keep at least one item for the test set whenever a class has more
+            # than one image. This protects tests and tiny demo datasets.
             split_index = min(split_index, len(shuffled) - 1)
         label_train = shuffled[:split_index]
         label_test = shuffled[split_index:]
@@ -184,18 +206,22 @@ def create_dataloaders(
         class_names = find_classes(train_dir)
         train_paths, train_labels, class_names = list_image_paths(train_dir, class_names)
         if test_dir is None:
+            # If only train_dir is supplied, create a holdout test split from it.
             train_paths, train_labels, test_paths, test_labels = stratified_split(
                 train_paths, train_labels, train_ratio=train_ratio, seed=seed
             )
         else:
+            # Reuse train class order for test labels so class indices match.
             test_paths, test_labels, _ = list_image_paths(test_dir, class_names)
     else:
+        # For a single data_dir, scan all images first, then split internally.
         all_paths, all_labels, class_names = list_image_paths(data_dir)
         train_paths, train_labels, test_paths, test_labels = stratified_split(
             all_paths, all_labels, train_ratio=train_ratio, seed=seed
         )
 
     if transform is not None:
+        # Backward-compatible shortcut: one transform can be shared by both sets.
         train_transform = train_transform or transform
         test_transform = test_transform or transform
     train_transform = train_transform or build_transforms(image_size=image_size, augment=augment, normalize=normalize)
@@ -203,11 +229,15 @@ def create_dataloaders(
 
     train_dataset = ImageDataset(train_paths, train_labels, class_names=class_names, transform=train_transform)
     test_dataset = ImageDataset(test_paths, test_labels, class_names=class_names, transform=test_transform)
+    # pin_memory speeds host-to-GPU transfer on CUDA machines and is harmless to
+    # disable explicitly on CPU-only systems.
     pin_memory = torch.cuda.is_available() if pin_memory is None else pin_memory
 
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=batch_size,
+        # Shuffling the train loader prevents the model from seeing classes in a
+        # fixed order every epoch.
         shuffle=True,
         num_workers=num_workers,
         pin_memory=pin_memory,

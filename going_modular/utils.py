@@ -6,6 +6,9 @@ import json
 from pathlib import Path
 from typing import Callable
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import torch
 from PIL import Image
@@ -13,7 +16,11 @@ from torch import nn
 
 
 def save_model(model: nn.Module, target_dir: str | Path, model_name: str = "best_model.pth") -> Path:
-    """Save a model state_dict to ``target_dir / model_name``."""
+    """Save a model state_dict to ``target_dir / model_name``.
+
+    A ``state_dict`` stores only learned parameters, which is the standard,
+    portable way to save PyTorch checkpoints for this assignment.
+    """
 
     target_dir = Path(target_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -27,11 +34,17 @@ def load_model(
     model_path: str | Path,
     device: torch.device | str = "cpu",
 ) -> nn.Module:
-    """Load a state_dict checkpoint into an instantiated model."""
+    """Load a state_dict checkpoint into an instantiated model.
 
+    The caller creates the architecture first, then this function fills it with
+    weights from disk. The architecture must match the saved checkpoint.
+    """
+
+    # map_location lets a GPU-trained checkpoint load on CPU-only machines.
     state_dict = torch.load(model_path, map_location=device)
     model.load_state_dict(state_dict)
     model.to(device)
+    # Inference should run in eval mode so layers behave deterministically.
     model.eval()
     return model
 
@@ -47,6 +60,8 @@ def save_json(data: dict, path: str | Path) -> None:
 def plot_loss_curves(results: dict[str, list[float]], save_path: str | Path = "loss_curves.png") -> Path:
     """Plot train/test loss and accuracy curves."""
 
+    # results comes directly from engine.train(), so both plots share the same
+    # epoch axis.
     epochs = range(1, len(results["train_loss"]) + 1)
     save_path = Path(save_path)
     plt.figure(figsize=(10, 5))
@@ -76,6 +91,8 @@ def plot_experiment_comparison(
     """Plot best test accuracy for each experiment run."""
 
     save_path = Path(save_path)
+    # The comparison chart summarizes runs by their best validation accuracy,
+    # which is more informative than only the final epoch.
     names = [summary["run_name"] for summary in experiment_summaries]
     accuracies = [summary["best_test_acc"] for summary in experiment_summaries]
     plt.figure(figsize=(max(8, len(names) * 2.5), 5))
@@ -99,11 +116,14 @@ def predict_image(
     """Return top-1 class name and confidence for one image."""
 
     image = Image.open(image_path).convert("RGB")
+    # Add a batch dimension because models expect shape [batch, channels, h, w].
     image_tensor = transform(image).unsqueeze(0).to(device)
     model.to(device)
     model.eval()
     with torch.inference_mode():
         logits = model(image_tensor)
+        # Convert logits to probabilities so the reported confidence is easier
+        # to understand for demos.
         probabilities = torch.softmax(logits, dim=1)
         confidence, prediction = probabilities.max(dim=1)
     return class_names[prediction.item()], confidence.item()
