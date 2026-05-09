@@ -1,0 +1,9 @@
+torch
+torchvision
+tensorboard
+matplotlib
+Pillow
+tqdm
+pytest
+pytest-cov
+datasets

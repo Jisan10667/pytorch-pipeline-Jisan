@@ -1,0 +1,39 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local datasets
+data/
+*.zip
+*.tar
+*.tar.gz
+
+# Generated training artifacts
+*.pth
+*.pt
+*.ckpt
+models/*
+!models/.gitkeep
+
+# TensorBoard event files can be large; keep directory placeholders and summaries.
+events.out.tfevents*
+experiments/**/events.out.tfevents*
+going_moduler/experiments/**/events.out.tfevents*
+
+# OS/editor clutter
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
