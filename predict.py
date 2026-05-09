@@ -7,7 +7,7 @@ from pathlib import Path
 
 import torch
 
-from going_moduler import data_setup, model_builder, utils
+from going_modular import data_setup, model_builder, utils
 
 
 def parse_args() -> argparse.Namespace:

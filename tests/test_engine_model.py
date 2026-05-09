@@ -2,8 +2,8 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from going_moduler import engine
-from going_moduler.model_builder import create_tinyvgg
+from going_modular import engine
+from going_modular.model_builder import create_tinyvgg
 
 
 def test_tinyvgg_forward_shape() -> None:

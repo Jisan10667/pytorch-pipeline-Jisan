@@ -10,7 +10,7 @@ import torch
 from torch import nn
 
 try:
-    from going_moduler import data_setup, engine, model_builder, utils
+    from going_modular import data_setup, engine, model_builder, utils
 except ImportError:
     import data_setup
     import engine

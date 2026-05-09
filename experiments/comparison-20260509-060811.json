@@ -1,0 +1,55 @@
+{
+  "experiments": [
+    {
+      "final_train_loss": 0.7167917595190161,
+      "final_train_acc": 0.6851365546218487,
+      "final_test_loss": 0.7706831574440003,
+      "final_test_acc": 0.6428571428571429,
+      "best_test_acc": 0.7089285714285715,
+      "best_epoch": 29,
+      "run_name": "tinyvgg-grid-20260509-060811-lr-0.001-hidden-10",
+      "model": "tinyvgg",
+      "learning_rate": 0.001,
+      "hidden_units": 10,
+      "class_names": [
+        "pizza",
+        "steak",
+        "sushi"
+      ]
+    },
+    {
+      "final_train_loss": 0.8601435457958895,
+      "final_train_acc": 0.6039915966386554,
+      "final_test_loss": 0.7901408076286316,
+      "final_test_acc": 0.5892857142857142,
+      "best_test_acc": 0.6901785714285714,
+      "best_epoch": 27,
+      "run_name": "tinyvgg-grid-20260509-060811-lr-0.0005-hidden-10",
+      "model": "tinyvgg",
+      "learning_rate": 0.0005,
+      "hidden_units": 10,
+      "class_names": [
+        "pizza",
+        "steak",
+        "sushi"
+      ]
+    },
+    {
+      "final_train_loss": 0.6886491828105029,
+      "final_train_acc": 0.7261029411764706,
+      "final_test_loss": 0.80569988489151,
+      "final_test_acc": 0.6589285714285714,
+      "best_test_acc": 0.7026785714285715,
+      "best_epoch": 8,
+      "run_name": "tinyvgg-grid-20260509-060811-lr-0.001-hidden-20",
+      "model": "tinyvgg",
+      "learning_rate": 0.001,
+      "hidden_units": 20,
+      "class_names": [
+        "pizza",
+        "steak",
+        "sushi"
+      ]
+    }
+  ]
+}

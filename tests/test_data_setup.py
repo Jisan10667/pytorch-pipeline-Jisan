@@ -4,7 +4,7 @@ import pytest
 import torch
 from PIL import Image
 
-from going_moduler.data_setup import ImageDataset, build_transforms, create_dataloaders
+from going_modular.data_setup import ImageDataset, build_transforms, create_dataloaders
 
 
 def _write_image(path: Path, color: tuple[int, int, int]) -> None:

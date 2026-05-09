@@ -1,0 +1,17 @@
+{
+  "final_train_loss": 0.7167917595190161,
+  "final_train_acc": 0.6851365546218487,
+  "final_test_loss": 0.7706831574440003,
+  "final_test_acc": 0.6428571428571429,
+  "best_test_acc": 0.7089285714285715,
+  "best_epoch": 29,
+  "run_name": "tinyvgg-grid-20260509-060811-lr-0.001-hidden-10",
+  "model": "tinyvgg",
+  "learning_rate": 0.001,
+  "hidden_units": 10,
+  "class_names": [
+    "pizza",
+    "steak",
+    "sushi"
+  ]
+}

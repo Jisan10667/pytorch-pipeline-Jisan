@@ -1,0 +1,17 @@
+{
+  "final_train_loss": 0.34554726411314574,
+  "final_train_acc": 0.8933823529411765,
+  "final_test_loss": 0.22397258281707763,
+  "final_test_acc": 0.93125,
+  "best_test_acc": 0.94375,
+  "best_epoch": 2,
+  "run_name": "effnetb0-20260509-061531",
+  "model": "effnetb0",
+  "learning_rate": 0.001,
+  "hidden_units": 10,
+  "class_names": [
+    "pizza",
+    "steak",
+    "sushi"
+  ]
+}

@@ -158,12 +158,12 @@ Food-101 subset.
 
 | Run | Model | Learning rate | Hidden units | Epochs | Best test accuracy |
 | --- | --- | ---: | ---: | ---: | ---: |
-| tinyvgg-lr-0.001-hidden-10 | TinyVGG | 0.001 | 10 | 30 | TBD |
-| tinyvgg-lr-0.0005-hidden-10 | TinyVGG | 0.0005 | 10 | 30 | TBD |
-| tinyvgg-lr-0.001-hidden-20 | TinyVGG | 0.001 | 20 | 30 | TBD |
-| effnetb0-transfer | EfficientNet_B0 | 0.001 | n/a | 10 | TBD |
+| tinyvgg-lr-0.001-hidden-10 | TinyVGG | 0.001 | 10 | 30 | 70.89% |
+| tinyvgg-lr-0.0005-hidden-10 | TinyVGG | 0.0005 | 10 | 30 | 69.01% |
+| tinyvgg-lr-0.001-hidden-20 | TinyVGG | 0.001 | 20 | 30 | 70.26% |
+| effnetb0-transfer | EfficientNet_B0 | 0.001 | n/a | 10 | 94.37% |
 
-Best config: update after the grid run. In general, the winning TinyVGG config
+Best config: `tinyvgg-lr-0.001-hidden-10` was the winning TinyVGG config because it had the highest test accuracy (70.89%) among all TinyVGG configurations while maintaining a balance to avoid overfitting. However, `effnetb0-transfer` performed substantially better overall with 94.37%. In general, the winning TinyVGG config
 should balance enough hidden units to learn food texture/shape cues without
 overfitting the small 675-image dataset.
 
